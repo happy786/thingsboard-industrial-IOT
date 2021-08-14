@@ -1,0 +1,57 @@
+int count1=0;
+int count2=0;
+const unsigned long eventTime_1_sensor1 = 100; // interval in ms
+const unsigned long eventTime_2_sensor2 = 100;
+
+unsigned long previousTime_1 = 0;
+unsigned long previousTime_2 = 0;
+
+void setup() {
+  //start serial connection
+  Serial.begin(9600);
+  //configure pin 2 as an input and enable the internal pull-up resistor
+  pinMode(2, INPUT_PULLUP);
+  pinMode(1, OUTPUT);
+  pinMode(4, INPUT_PULLUP);
+
+}
+
+void loop() {
+  unsigned long currentTime = millis();
+  //read the pushbutton value into a variable
+  int sensorVal = digitalRead(2);
+  
+  if( currentTime - previousTime_1 >= eventTime_1_sensor1 ){
+  if (sensorVal == HIGH) {
+    digitalWrite(13, LOW);
+    
+  } else {
+    digitalWrite(13, HIGH);
+    count1++;
+    Serial.write("A");}
+    
+  
+
+  /* Update the timing for the next event */
+  previousTime_1 = currentTime;
+  }
+  
+  //print out the value of the pushbutton
+  
+  int sensorVal1 = digitalRead(4);
+  
+  if( currentTime - previousTime_2 >= eventTime_2_sensor2 ){
+  if (sensorVal1 == HIGH) {
+    digitalWrite(13, LOW);
+    
+  } else {
+    digitalWrite(13, HIGH);
+    count2++;
+    Serial.write("B");}
+    
+  
+
+  /* Update the timing for the next event */
+  previousTime_2 = currentTime;
+  }
+} 
