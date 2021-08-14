@@ -1,0 +1,122 @@
+import time
+import paho.mqtt.client as mqtt
+import json
+
+
+count=0
+count1=0
+down_time=0
+reject=0
+infeed=0
+outfeed=0
+
+import serial
+
+ser = serial.Serial(port='/dev/ttyACM0',baudrate = 9600,parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,timeout=1)
+# Wait to read from Arduino
+
+
+from threading import Thread
+
+THINGSBOARD_HOST = '********'
+ACCESS_TOKEN = '*********'
+
+    # Data capture and upload interval in seconds. Less interval will eventually hang the DHT22.
+
+
+sensor_data = {'Bottle_IN': 0, 'Bottle_OUT': 0}
+sensor_data2 = {'Down_Time':0}
+
+
+client = mqtt.Client()
+
+    # Set access token
+client.username_pw_set(ACCESS_TOKEN)
+
+    # Connect to ThingsBoard using default MQTT port and 60 seconds keepalive interval
+client.connect(THINGSBOARD_HOST, 1883, 60)
+
+
+
+print('Publishing a new message every 10 seconds (press Ctrl-C to quit)...')       
+def getdata():
+    global count1
+    global count
+    global down_time
+    global reject
+    global outfeed
+    global infeed
+    while True:
+        while ser.inWaiting():
+            count = ser.read()
+            count1 = count.decode("utf-8","ignore")
+            D=count1
+       
+       
+            if D=="A":
+                outfeed+=1
+                print("out:",outfeed)
+                   
+            if D=="B":
+                infeed+=1
+                print("in:",infeed)  
+            
+def stoppage():
+    global down_time
+    global count1
+    global count
+    test_time = 0
+    while True:
+        sensor_data2['Down_Time'] = down_time
+        try:
+            
+            E=count1
+            
+            if E!="A":
+                start=time.time()
+            
+            if E=="A":
+                end=time.time()
+                test_time=(end-start)
+                if test_time >=9:
+                    down_time=(test_time/60)
+                    client.publish('v1/devices/me/telemetry', json.dumps(sensor_data2), 1)
+                    print(down_time)
+                    time.sleep(3600)
+            
+                
+                
+        except:
+            pass
+        
+
+
+def things():
+    global infeed
+    global outfeed
+    global reject
+    
+    client.loop_start()
+
+    try:
+        while True:
+            
+            sensor_data['Bottle_IN'] = infeed
+            sensor_data['Bottle_OUT'] = outfeed
+            
+
+            # Sending humidity and temperature data to ThingsBoard
+            client.publish('v1/devices/me/telemetry', json.dumps(sensor_data), 1)
+            time.sleep(10)
+            
+    except KeyboardInterrupt:
+        pass
+
+    client.loop_stop()
+    client.disconnect()
+if __name__=='__main__':
+    Thread(target= getdata).start()
+    Thread(target= things).start()  
+    Thread(target= stoppage).start() 
+
